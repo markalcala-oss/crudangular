@@ -1,0 +1,225 @@
+<div class="app-layout">
+  <aside class="sidebar">
+    <a class="brand" href="#inicio" aria-label="Mesa de soporte, inicio">
+      <span class="brand-mark" aria-hidden="true">m</span>
+      <span class="brand-name">mesa<span>ayuda</span></span>
+    </a>
+
+    <div class="workspace-label">ESPACIO DE TRABAJO</div>
+    <nav class="side-nav" aria-label="Navegación principal">
+      <a class="nav-item active" href="#incidencias"><span aria-hidden="true">▦</span> Incidencias <span class="nav-count">{{ openCount }}</span></a>
+      <a class="nav-item" href="#resumen"><span aria-hidden="true">◷</span> Resumen</a>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="local-status"><span></span> Modo local activo</div>
+      <div class="user-card">
+        <div class="user-avatar">VG</div>
+        <div><strong>Valle Grande</strong><small>Administración</small></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="workspace" id="inicio">
+    <header class="workspace-header">
+      <div class="breadcrumbs">OPERACIONES <span>/</span> SOPORTE TÉCNICO</div>
+      <div class="header-date"><span aria-hidden="true">◷</span> Panel institucional</div>
+    </header>
+
+    <section class="welcome-section">
+      <div>
+        <p class="eyebrow">CENTRO DE OPERACIONES</p>
+        <h1>Mesa de ayuda</h1>
+        <p class="welcome-copy">Administra los reportes y mantén cada solicitud en movimiento.</p>
+      </div>
+      <button class="button button-primary new-incident" type="button" (click)="openCreate()">
+        <span aria-hidden="true">＋</span> Crear incidencia
+      </button>
+    </section>
+
+    <section class="summary-grid" id="resumen" aria-label="Resumen de incidencias">
+      <article class="summary-card">
+        <div class="metric-heading"><span class="metric-icon metric-total" aria-hidden="true">▤</span><span>En el sistema</span></div>
+        <div class="metric-value">{{ incidents.length }} <span>incidencias</span></div>
+        <div class="metric-caption">Registros acumulados</div>
+      </article>
+      <article class="summary-card">
+        <div class="metric-heading"><span class="metric-icon metric-pending" aria-hidden="true">◷</span><span>Por atender</span></div>
+        <div class="metric-value">{{ pendingCount }}</div>
+        <div class="metric-caption">Pendientes de revisión</div>
+      </article>
+      <article class="summary-card">
+        <div class="metric-heading"><span class="metric-icon metric-progress" aria-hidden="true">↗</span><span>En curso</span></div>
+        <div class="metric-value">{{ inProgressCount }}</div>
+        <div class="metric-caption">Con seguimiento activo</div>
+      </article>
+      <article class="summary-card">
+        <div class="metric-heading"><span class="metric-icon metric-resolved" aria-hidden="true">✓</span><span>Finalizadas</span></div>
+        <div class="metric-value">{{ resolvedCount }}</div>
+        <div class="metric-caption">Incidencias resueltas</div>
+      </article>
+    </section>
+
+    <section class="incidents-panel" id="incidencias" aria-labelledby="incidents-heading">
+      <div class="panel-heading">
+        <div>
+          <div class="panel-kicker"><span class="live-dot"></span> BANDEJA DE TRABAJO</div>
+          <h2 id="incidents-heading">Incidencias recientes</h2>
+          <p>Consulta, filtra o actualiza las solicitudes registradas.</p>
+        </div>
+        <span class="record-count">{{ filteredIncidents.length }} {{ filteredIncidents.length === 1 ? 'resultado' : 'resultados' }}</span>
+      </div>
+
+      <div class="filters" role="search">
+        <label class="search-box">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <span class="visually-hidden">Buscar por título</span>
+          <input type="search" [(ngModel)]="searchTerm" placeholder="Buscar una incidencia..." />
+        </label>
+        <label class="filter-field">
+          <span>Prioridad</span>
+          <select [(ngModel)]="priorityFilter" aria-label="Filtrar por prioridad">
+            <option value="Todas">Cualquiera</option>
+            <option *ngFor="let priority of priorities" [value]="priority">{{ priority }}</option>
+          </select>
+        </label>
+        <label class="filter-field">
+          <span>Estado</span>
+          <select [(ngModel)]="statusFilter" aria-label="Filtrar por estado">
+            <option value="Todos">Cualquiera</option>
+            <option *ngFor="let status of statuses" [value]="status">{{ status }}</option>
+          </select>
+        </label>
+        <button class="clear-button" type="button" (click)="clearFilters()">Restablecer</button>
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-error" role="alert">{{ errorMessage }}</div>
+      <div *ngIf="successMessage" class="alert alert-success" role="status">{{ successMessage }}</div>
+
+      <div class="incident-list">
+        <article class="incident-card" *ngFor="let incident of filteredIncidents; trackBy: trackById">
+          <div class="priority-marker" [ngClass]="'marker-' + incident.priority.toLowerCase()" aria-hidden="true"></div>
+          <div class="incident-content">
+            <div class="incident-topline">
+              <span class="incident-code">{{ incident.code }}</span>
+              <span class="badge" [ngClass]="'priority-' + incident.priority.toLowerCase()">{{ incident.priority }} prioridad</span>
+              <span class="badge" [ngClass]="'status-' + (incident.status === 'En proceso' ? 'proceso' : incident.status.toLowerCase())">{{ incident.status }}</span>
+            </div>
+            <button class="title-button" type="button" (click)="openView(incident)">{{ incident.title }}</button>
+            <p class="incident-description">{{ incident.description }}</p>
+            <div class="incident-meta">
+              <span><span aria-hidden="true">◷</span> {{ incident.createdAt | date:'dd MMM yyyy':'':'es' }}</span>
+              <span><span aria-hidden="true">♙</span> {{ incident.responsible }}</span>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button class="icon-button" type="button" (click)="openView(incident)" [attr.aria-label]="'Ver ' + incident.code" title="Ver detalles">↗</button>
+            <button class="icon-button" type="button" (click)="openEdit(incident)" [attr.aria-label]="'Editar ' + incident.code" title="Editar">✎</button>
+            <button class="icon-button danger-action" type="button" (click)="openDelete(incident)" [attr.aria-label]="'Eliminar ' + incident.code" title="Eliminar">⌫</button>
+          </div>
+        </article>
+
+        <div *ngIf="filteredIncidents.length === 0" class="empty-state">
+          <span class="empty-icon" aria-hidden="true">⌕</span>
+          <strong>No hay coincidencias</strong>
+          <p>Prueba con otros filtros o registra una incidencia nueva.</p>
+          <button class="button button-secondary" type="button" (click)="clearFilters()">Restablecer filtros</button>
+        </div>
+      </div>
+      <div class="panel-footer"><span>Los cambios se guardan automáticamente en este dispositivo.</span><span>Mostrando {{ filteredIncidents.length }} de {{ incidents.length }}</span></div>
+    </section>
+
+    <footer class="page-footer"><span>PLATAFORMA DE SOPORTE · VALLE GRANDE</span><span>Angular · TypeScript</span></footer>
+  </main>
+</div>
+
+<div *ngIf="dialogMode" class="modal-backdrop" (click)="closeDialog()">
+  <section
+    class="dialog"
+    [class.dialog-compact]="dialogMode === 'delete' || dialogMode === 'view'"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-labelledby]="'dialog-title'"
+    (click)="$event.stopPropagation()"
+  >
+    <ng-container *ngIf="dialogMode === 'create' || dialogMode === 'edit'">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">{{ dialogMode === 'edit' ? 'ACTUALIZAR SOLICITUD' : 'NUEVA SOLICITUD' }}</p>
+          <h2 id="dialog-title">{{ dialogMode === 'edit' ? 'Editar incidencia' : 'Crear incidencia' }}</h2>
+        </div>
+        <button class="close-button" type="button" aria-label="Cerrar" (click)="closeDialog()">×</button>
+      </div>
+      <form #incidentForm="ngForm" (ngSubmit)="saveIncident()" novalidate>
+        <label class="form-field">
+          <span>Título <b>*</b></span>
+          <input name="title" [(ngModel)]="formValue.title" required minlength="4" maxlength="90" #title="ngModel" placeholder="Ej. Falla de red en laboratorio" />
+          <small *ngIf="title.invalid && (title.dirty || title.touched)" class="field-error">Ingresa un título de al menos 4 caracteres.</small>
+        </label>
+        <label class="form-field">
+          <span>Descripción <b>*</b></span>
+          <textarea name="description" [(ngModel)]="formValue.description" required minlength="8" maxlength="500" rows="4" #description="ngModel" placeholder="Describe el problema y los detalles técnicos..."></textarea>
+          <small *ngIf="description.invalid && (description.dirty || description.touched)" class="field-error">La descripción debe tener al menos 8 caracteres.</small>
+        </label>
+        <div class="form-row">
+          <label class="form-field">
+            <span>Prioridad</span>
+            <select name="priority" [(ngModel)]="formValue.priority" required>
+              <option *ngFor="let priority of priorities" [value]="priority">{{ priority }}</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Estado</span>
+            <select name="status" [(ngModel)]="formValue.status" required>
+              <option *ngFor="let status of statuses" [value]="status">{{ status }}</option>
+            </select>
+          </label>
+        </div>
+        <label class="form-field">
+          <span>Responsable <b>*</b></span>
+          <input name="responsible" [(ngModel)]="formValue.responsible" required minlength="2" maxlength="80" #responsible="ngModel" placeholder="Nombre del técnico asignado" />
+          <small *ngIf="responsible.invalid && (responsible.dirty || responsible.touched)" class="field-error">Indica quién dará seguimiento.</small>
+        </label>
+        <p class="required-note">* Campos obligatorios</p>
+        <div class="dialog-actions">
+          <button class="button button-quiet" type="button" (click)="closeDialog()">Cancelar</button>
+          <button class="button button-primary" type="submit" [disabled]="incidentForm.invalid">
+            {{ dialogMode === 'edit' ? 'Guardar cambios' : 'Registrar incidencia' }}
+          </button>
+        </div>
+      </form>
+    </ng-container>
+
+    <ng-container *ngIf="dialogMode === 'view' && selectedIncident as incident">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">SOLICITUD {{ incident.code }}</p>
+          <h2 id="dialog-title">{{ incident.title }}</h2>
+        </div>
+        <button class="close-button" type="button" aria-label="Cerrar" (click)="closeDialog()">×</button>
+      </div>
+      <p class="detail-description">{{ incident.description }}</p>
+      <dl class="detail-grid">
+        <div><dt>Prioridad</dt><dd><span class="badge" [ngClass]="'priority-' + incident.priority.toLowerCase()">{{ incident.priority }}</span></dd></div>
+        <div><dt>Estado</dt><dd><span class="badge" [ngClass]="'status-' + (incident.status === 'En proceso' ? 'proceso' : incident.status.toLowerCase())">{{ incident.status }}</span></dd></div>
+        <div><dt>Responsable</dt><dd>{{ incident.responsible }}</dd></div>
+        <div><dt>Fecha de registro</dt><dd>{{ incident.createdAt | date:'dd/MM/yyyy, HH:mm':'':'es' }}</dd></div>
+      </dl>
+      <div class="dialog-actions">
+        <button class="button button-quiet" type="button" (click)="closeDialog()">Cerrar</button>
+        <button class="button button-primary" type="button" (click)="openEdit(incident)">Editar incidencia</button>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="dialogMode === 'delete' && selectedIncident as incident">
+      <div class="delete-symbol" aria-hidden="true">!</div>
+      <p class="eyebrow centered">CONFIRMA LA ACCIÓN</p>
+      <h2 class="delete-title" id="dialog-title">¿Eliminar incidencia?</h2>
+      <p class="delete-copy">Se eliminará <strong>{{ incident.code }} · {{ incident.title }}</strong>. Esta acción no se puede deshacer.</p>
+      <div class="dialog-actions">
+        <button class="button button-quiet" type="button" (click)="closeDialog()">Cancelar</button>
+        <button class="button button-danger" type="button" (click)="confirmDelete()">Eliminar</button>
+      </div>
+    </ng-container>
+  </section>
+</div>
